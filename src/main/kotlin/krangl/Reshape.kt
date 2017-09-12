@@ -9,7 +9,7 @@ package krangl
  * @param convert If set, attempt to do a type conversion will be run on all new columns. This is useful if the value column
  *                was a mix of variables that was coerced to a string.
  */
-fun DataFrame.spread(key: String, value: String, fill: Any? = null, convert: Boolean = false): DataFrame {
+fun DataFrame.spread(key: String, value: String, fill: Any? = null, convert: Boolean = true): DataFrame {
 
     // create new columns
     val newColNames = this[key].values().distinct()  // .map { it.toString() } dont'convert already because otherwise join will fail
@@ -26,6 +26,7 @@ fun DataFrame.spread(key: String, value: String, fill: Any? = null, convert: Boo
             .map {
                 val grpDf = it.df
 
+                if(grpDf.select(key).distinct(key).nrow != grpDf.nrow) return SimpleDataFrame()
                 require(grpDf.select(key).distinct(key).nrow == grpDf.nrow) { "key value mapping is not unique" }
 
                 val spreadBlock = SimpleDataFrame(handleListErasure(key, newColNames)).leftJoin(grpDf.select(key, value))
@@ -42,7 +43,6 @@ fun DataFrame.spread(key: String, value: String, fill: Any? = null, convert: Boo
 //    }
 
     val spreadWithGHashes = spreadGroups.bindRows()
-
 
     // coerce types of strinified coluymns similar to how tidy is doing things
     var typeCoercedSpread = newColNames.map { it.toString() }
@@ -78,7 +78,7 @@ fun DataFrame.spread(key: String, value: String, fill: Any? = null, convert: Boo
  * @param convert If TRUE will automatically run `convertType` on the key column. This is useful if the
  *                column names are actually numeric, integer, or logical.
  */
-fun DataFrame.gather(key: String, value: String, which: List<String> = this.names, convert: Boolean = false): DataFrame {
+fun DataFrame.gather(key: String, value: String, which: List<String> = this.names, convert: Boolean = true): DataFrame {
     require(which.isNotEmpty()) { "the column selection to be `gather`ed must not be empty" }
 
     val gatherColumns = select(which)
@@ -168,7 +168,17 @@ fun DataFrame.unite(colName: String, which: List<String>, sep: String = "_", rem
 
     val rest = if (remove) select({ -oneOf(uniteBlock.names) }) else this
 
-    return rest.mutate(colName to { uniteResult })
+
+    val first_pos = this.names
+            .takeWhile { !which.contains(it) }
+            .count()
+    val header = colName to {uniteResult}
+    val mutation = header.formula(this, this)
+    val newCol = anyAsColumn(mutation, header.resultName, nrow)
+    val newDf = rest.cols.toMutableList()
+    newDf.add(first_pos, newCol)
+    return SimpleDataFrame(newDf)
+   // return rest.mutate(colName to { uniteResult })
 }
 
 
@@ -210,4 +220,8 @@ fun DataFrame.separate(column: String, into: List<String>, sep: String = "_", re
     val rest = if (remove) select(-column) else this
 
     return bindCols(rest, SimpleDataFrame(splitCols))
+}
+
+fun hasSameContents(first: DataFrame, second: DataFrame): Boolean {
+    return first.rawRows.toList().equals(second.rawRows.toList())
 }

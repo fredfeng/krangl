@@ -266,6 +266,19 @@ fun DataCol.mean(removeNA: Boolean = false): Double? = when (this) {
 }
 
 /**
+ * Calculates the arithmetic sum of the column values.
+ *
+ * @param removeNA If `true` missing values will be excluded from the operation
+ * @throws MissingValueException If removeNA is `false` but the data contains missing values.
+ * @throws InvalidColumnOperationException If the type of the receiver column is not numeric
+ */
+fun DataCol.sum(removeNA: Boolean = false): Double? = when (this) {
+    is DoubleCol -> values.run { if (removeNA) filterNotNull().toTypedArray() else forceNotNull() }.sum()
+    is IntCol -> values.map { it?.toDouble() }.toTypedArray().run { if (removeNA) filterNotNull().toTypedArray() else forceNotNull() }.sum()
+    else -> throw InvalidColumnOperationException(this)
+}
+
+/**
  * Calculates the median of the column values.
  *
  * @param removeNA If `true` missing values will be excluded from the operation
