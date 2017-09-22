@@ -9,7 +9,7 @@ package krangl
  * @param convert If set, attempt to do a type conversion will be run on all new columns. This is useful if the value column
  *                was a mix of variables that was coerced to a string.
  */
-fun DataFrame.spread(key: String, value: String, fill: Any? = null, convert: Boolean = true): DataFrame {
+fun DataFrame.spread(key: String, value: String, fill: Any? = null, convert: Boolean = false): DataFrame {
 
     // create new columns
     val newColNames = this[key].values().distinct()  // .map { it.toString() } dont'convert already because otherwise join will fail
@@ -26,10 +26,15 @@ fun DataFrame.spread(key: String, value: String, fill: Any? = null, convert: Boo
             .map {
                 val grpDf = it.df
 
-                if(grpDf.select(key).distinct(key).nrow != grpDf.nrow) return SimpleDataFrame()
+                if (grpDf.select(key).distinct(key).nrow != grpDf.nrow) return SimpleDataFrame()
                 require(grpDf.select(key).distinct(key).nrow == grpDf.nrow) { "key value mapping is not unique" }
 
                 val spreadBlock = SimpleDataFrame(handleListErasure(key, newColNames)).leftJoin(grpDf.select(key, value))
+                // Remove all dataframe with <NA>
+                for (dc in spreadBlock.cols) {
+                    var notNullList = dc.values().filterNotNull()
+                    if (notNullList.size < dc.values().size) return SimpleDataFrame()
+                }
 
                 val grpSpread = SimpleDataFrame((spreadBlock as SimpleDataFrame).rows.map {
                     AnyCol(it[key].toString(), listOf(it[value]))
@@ -78,7 +83,7 @@ fun DataFrame.spread(key: String, value: String, fill: Any? = null, convert: Boo
  * @param convert If TRUE will automatically run `convertType` on the key column. This is useful if the
  *                column names are actually numeric, integer, or logical.
  */
-fun DataFrame.gather(key: String, value: String, which: List<String> = this.names, convert: Boolean = true): DataFrame {
+fun DataFrame.gather(key: String, value: String, which: List<String> = this.names, convert: Boolean = false): DataFrame {
     require(which.isNotEmpty()) { "the column selection to be `gather`ed must not be empty" }
 
     val gatherColumns = select(which)
@@ -172,13 +177,13 @@ fun DataFrame.unite(colName: String, which: List<String>, sep: String = "_", rem
     val first_pos = this.names
             .takeWhile { !which.contains(it) }
             .count()
-    val header = colName to {uniteResult}
+    val header = colName to { uniteResult }
     val mutation = header.formula(this, this)
     val newCol = anyAsColumn(mutation, header.resultName, nrow)
     val newDf = rest.cols.toMutableList()
     newDf.add(first_pos, newCol)
     return SimpleDataFrame(newDf)
-   // return rest.mutate(colName to { uniteResult })
+    // return rest.mutate(colName to { uniteResult })
 }
 
 
@@ -200,16 +205,19 @@ fun DataFrame.separate(column: String, into: List<String>, sep: String = "_", re
     val sepCol = this[column]
 
     // split colum  by given delimter and keep NAs
-    val splitData = sepCol.asStrings().map { it?.split(delimiters = sep)?.map { it.naAsNull() } }
+    val splitData = sepCol.asStrings().map { it?.split(sep.toRegex())?.map { it.naAsNull() } }
     val splitWidths = splitData.map { it?.size }.filterNotNull().distinct()
     val numSplits = splitWidths.first()
 
-    require(splitWidths.size == 1) { "unequal splits are not yet supported" }
-    require(numSplits == into.size) { "mimatch between number of splits ${numSplits} and provided new column names '${into}'" }
+    // Fail to split, return an empty df.
+    if ((splitWidths.size != 1) || (numSplits != into.size)) {
+        return SimpleDataFrame()
+    }
+    //require(splitWidths.size == 1) { "unequal splits are not yet supported" }
+    //require(numSplits == into.size) { "mimatch between number of splits ${numSplits} and provided new column names '${into}'" }
 
     // vertically split into columns and perform optional type conversion
-    val splitCols: List<DataCol> = (0..(numSplits - 1)).map { splitIndex ->
-        println(splitIndex)
+    val splitCols: List<DataCol> = (0..(numSplits - 1)).map { splitIndex: Int ->
         StringCol(into[splitIndex], splitData.map { it?.get(splitIndex) })
     }.map {
         // optionally do type conversion
@@ -223,5 +231,15 @@ fun DataFrame.separate(column: String, into: List<String>, sep: String = "_", re
 }
 
 fun hasSameContents(first: DataFrame, second: DataFrame): Boolean {
-    return first.rawRows.toList().equals(second.rawRows.toList())
+    if (!((first.ncol == second.ncol) && (first.nrow == second.nrow))) return false
+
+    first.rawRows.toList().withIndex().forEach { (index, lhs) ->
+        var rhs_elem = second.rawRows.toList()[index]
+        //FIXME: performance issue
+        var v1 = lhs.map { it?.toString() }.toHashSet()
+        var v2 = rhs_elem.map { it?.toString() }.toHashSet()
+        if (!v1.equals(v2)) return false
+    }
+
+    return true
 }

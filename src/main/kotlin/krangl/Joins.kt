@@ -223,7 +223,7 @@ private fun prep4Join(by: Iterable<String>, left: DataFrame, right: DataFrame, s
 
 //fun DataFrame.joinLeft(right: DataFrame,by:String) = joinLeft(this, right, *by)
 private fun defaultBy(left: DataFrame, right: DataFrame) = left.names.intersect(right.names).apply {
-    System.err.print("""Joining by: ${this.joinToString(",")}""")
+    //System.err.print("""Joining by: ${this.joinToString(",")}""")
 }
 
 
