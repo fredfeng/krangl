@@ -42,6 +42,12 @@ abstract class DataCol(val name: String) {
 
 
 private fun <T> naAwareOp(first: T?, second: T?, op: (T, T) -> T): T? {
+    println("naAwareOp------------")
+    println(first)
+    println(second)
+    println(op)
+    println(op(first as T, second as T))
+
     return if (first == null || second == null) null else op(first, second)
 }
 
@@ -77,8 +83,9 @@ class DoubleCol(name: String, val values: Array<Double?>) : DataCol(name) {
 
 
     private fun arithOp(something: Any, op: (Double, Double) -> Double): DataCol = when (something) {
-        is DoubleCol -> Array(values.size, { values[it] })
-                .apply { mapIndexed { index, rowVal -> naAwareOp(rowVal, something.values[index], op) } }
+//        is DoubleCol -> Array(values.size, { values[it] })
+//                .apply { mapIndexed { index, rowVal -> naAwareOp(rowVal, something.values[index], op) } }
+        is DoubleCol -> values.zip(something.values).map { naAwareOp(it.first, it.second, op) }.toTypedArray()
 
         is Number -> Array(values.size, { naAwareOp(values[it], something.toDouble(), op) })
         else -> throw UnsupportedOperationException()
@@ -102,8 +109,9 @@ class IntCol(name: String, val values: Array<Int?>) : DataCol(name) {
 
 
     private fun arithOp(something: Any, op: (Int, Int) -> Int): DataCol = when (something) {
-        is IntCol -> Array(values.size, { values[it] })
-                .apply { mapIndexed { index, rowVal -> naAwareOp(rowVal, something.values[index], op) } }
+//        is IntCol -> Array(values.size, { values[it] })
+//                .apply { mapIndexed { index, rowVal -> naAwareOp(rowVal, something.values[index], op) } }
+        is IntCol -> values.zip(something.values).map { naAwareOp(it.first, it.second, op) }.toTypedArray()
 
         is Number -> Array(values.size, { naAwareOp(values[it], something.toInt(), op) })
         else -> throw UnsupportedOperationException()

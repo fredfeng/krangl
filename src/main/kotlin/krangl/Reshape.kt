@@ -227,19 +227,49 @@ fun DataFrame.separate(column: String, into: List<String>, sep: String = "_", re
     // column bind rest and separated columns into final result
     val rest = if (remove) select(-column) else this
 
-    return bindCols(rest, SimpleDataFrame(splitCols))
+    val first_pos = this.cols.indexOf(sepCol)
+    val newDf = rest.cols.toMutableList()
+    newDf.add(first_pos, splitCols[0])
+    newDf.add(first_pos + 1, splitCols[1])
+    return SimpleDataFrame(newDf)
+
+//    return bindCols(rest, SimpleDataFrame(splitCols))
 }
 
 fun hasSameContents(first: DataFrame, second: DataFrame): Boolean {
     if (!((first.ncol == second.ncol) && (first.nrow == second.nrow))) return false
 
-    first.rawRows.toList().withIndex().forEach { (index, lhs) ->
-        var rhs_elem = second.rawRows.toList()[index]
-        //FIXME: performance issue
+    //first.rawRows.toList().withIndex().forEach { (index, lhs) ->
+    first.rawRows.forEach { lhs ->
         var v1 = lhs.map { it?.toString() }.toHashSet()
-        var v2 = rhs_elem.map { it?.toString() }.toHashSet()
-        if (!v1.equals(v2)) return false
+        val equal = second.rawRows
+                .map { rhs -> rhs.map { it?.toString() }.toHashSet() }
+                .any { setEq(v1, it) }
+
+        if (!equal) return false
     }
 
     return true
+}
+
+fun setEq(s1: HashSet<String?>, s2: HashSet<String?>): Boolean {
+    return s1
+            .map { first -> s2.any { approxEq(first, it) } }
+            .any { it }
+}
+
+fun approxEq(s1: String?, s2: String?): Boolean {
+    val regx = "-?\\d+(\\.\\d+)?"
+    val n1 = s1!!.matches(regx.toRegex())
+    val n2 = s2!!.matches(regx.toRegex())
+    if (n1 && n2) {
+        val d1 = s1.toDouble()
+        val d2 = s2.toDouble()
+        val delta = 0.00001
+        val diff = Math.abs(d1 - d2)
+        return diff < delta
+
+    } else {
+        return s1.equals(s2)
+    }
 }
