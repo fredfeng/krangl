@@ -466,7 +466,19 @@ data class TableHeader(val header: List<String>) {
 
         // 2) infer column type by peeking into column data
         val tableColumns = header.zip(rawColumns).map {
-            handleListErasure(it.first, it.second)
+            if(isListOfType<Double>(it.second)) {
+                val mutableList : MutableList<Double> = arrayListOf()
+                for (o in it.second) {
+                    if(o is Int) {
+                        mutableList.add(o.toDouble())
+                    } else {
+                        mutableList.add(o as Double)
+                    }
+                }
+                DoubleCol(it.first, mutableList)
+            } else {
+                handleListErasure(it.first, it.second)
+            }
         }
 
         require(tableColumns.map { it.length }.distinct().size == 1) {
