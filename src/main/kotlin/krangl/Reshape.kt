@@ -94,10 +94,10 @@ fun DataFrame.gather(key: String, value: String, which: List<String> = this.name
 
     // todo why cant we use handleArrayErasure() here?
     fun makeValueCol(name: String, data: Array<*>): DataCol = when {
-        distinctCols.get(0) == IntCol::class.java -> IntCol(name, data as List<Int?>)
+        distinctCols == IntCol::class.java -> IntCol(name, data as List<Int?>)
         distinctCols == DoubleCol::class.java -> DoubleCol(name, data as List<Double?>)
         distinctCols == BooleanCol::class.java -> BooleanCol(name, data as List<Boolean?>)
-        else -> IntCol(name, Array(data.size, { index -> data[index] }))
+        else -> StringCol(name, Array(data.size, { index -> data[index]?.toString() }))
     }
 
     val gatherBlock = gatherColumns.cols.map { column ->
