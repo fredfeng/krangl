@@ -12,6 +12,7 @@ fun main(args: Array<String>) {
       1, 24.3, 10.2, 5.5, 4.5,
       2, 23.4, 10.4, 5.7, 3.2
     )
+    df.print()
 
 //    var TBL_3=df.gather("MORPH394","P",-"ID",-"T")
     var TBL_3=df.gather("MORPH394","P",-"T",-"ID")

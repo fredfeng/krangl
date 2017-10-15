@@ -42,12 +42,6 @@ abstract class DataCol(val name: String) {
 
 
 private fun <T> naAwareOp(first: T?, second: T?, op: (T, T) -> T): T? {
-    println("naAwareOp------------")
-    println(first)
-    println(second)
-    println(op)
-    println(op(first as T, second as T))
-
     return if (first == null || second == null) null else op(first, second)
 }
 
@@ -86,6 +80,7 @@ class DoubleCol(name: String, val values: Array<Double?>) : DataCol(name) {
 //        is DoubleCol -> Array(values.size, { values[it] })
 //                .apply { mapIndexed { index, rowVal -> naAwareOp(rowVal, something.values[index], op) } }
         is DoubleCol -> values.zip(something.values).map { naAwareOp(it.first, it.second, op) }.toTypedArray()
+        is IntCol -> values.zip(something.values).map { naAwareOp(it.first, it.second?.toDouble(), op) }.toTypedArray()
 
         is Number -> Array(values.size, { naAwareOp(values[it], something.toDouble(), op) })
         else -> throw UnsupportedOperationException()
@@ -112,7 +107,7 @@ class IntCol(name: String, val values: Array<Int?>) : DataCol(name) {
 //        is IntCol -> Array(values.size, { values[it] })
 //                .apply { mapIndexed { index, rowVal -> naAwareOp(rowVal, something.values[index], op) } }
         is IntCol -> values.zip(something.values).map { naAwareOp(it.first, it.second, op) }.toTypedArray()
-
+        is DoubleCol -> values.zip(something.values).map { naAwareOp(it.first, it.second?.toInt(), op) }.toTypedArray()
         is Number -> Array(values.size, { naAwareOp(values[it], something.toInt(), op) })
         else -> throw UnsupportedOperationException()
     }.let { IntCol(TMP_COLUMN, it) }
@@ -176,13 +171,21 @@ infix fun DataCol.gt(i: Number) = when (this) {
     else -> throw UnsupportedOperationException()
 }.toBooleanArray()
 
-infix fun DataCol.lt(i: Int) = gt(i).map { !it }.toBooleanArray()
+infix fun DataCol.lt(i: Number) = gt(i).map { !it }.toBooleanArray()
 
 infix fun DataCol.eq(i: Any): BooleanArray = when (this) {
     is DoubleCol -> this.values().map({ it == i })
     is IntCol -> this.values.map({ it == i })
     is BooleanCol -> this.values.map({ it == i })
     is StringCol -> this.values.map({ it == i })
+    else -> throw UnsupportedOperationException()
+}.toBooleanArray()
+
+infix fun DataCol.neq(i: Any): BooleanArray = when (this) {
+    is DoubleCol -> this.values().map({ it != i })
+    is IntCol -> this.values.map({ it != i })
+    is BooleanCol -> this.values.map({ it != i })
+    is StringCol -> this.values.map({ it != i })
     else -> throw UnsupportedOperationException()
 }.toBooleanArray()
 
@@ -283,6 +286,13 @@ fun DataCol.mean(removeNA: Boolean = false): Double? = when (this) {
 fun DataCol.sum(removeNA: Boolean = false): Double? = when (this) {
     is DoubleCol -> values.run { if (removeNA) filterNotNull().toTypedArray() else forceNotNull() }.sum()
     is IntCol -> values.map { it?.toDouble() }.toTypedArray().run { if (removeNA) filterNotNull().toTypedArray() else forceNotNull() }.sum()
+    else -> throw InvalidColumnOperationException(this)
+}
+
+fun DataCol.count(): Int? = when (this) {
+    is DoubleCol -> values.size
+    is IntCol -> values.size
+    is StringCol -> values.size
     else -> throw InvalidColumnOperationException(this)
 }
 

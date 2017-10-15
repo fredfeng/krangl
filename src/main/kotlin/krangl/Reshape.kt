@@ -15,6 +15,7 @@ fun DataFrame.spread(key: String, value: String, fill: Any? = null, convert: Boo
     val newColNames = this[key].values().distinct()  // .map { it.toString() } dont'convert already because otherwise join will fail
 
     // make sure that new column names do not exist already
+    if(!names.intersect(newColNames).isEmpty()) return SimpleDataFrame()
     require(names.intersect(newColNames).isEmpty()) { "spread columns do already exist in data-frame" }
 
 
@@ -91,13 +92,12 @@ fun DataFrame.gather(key: String, value: String, which: List<String> = this.name
     // 1) convert each gather column into a block
     val distinctCols = gatherColumns.cols.map { it.javaClass }.distinct()
 
-
     // todo why cant we use handleArrayErasure() here?
     fun makeValueCol(name: String, data: Array<*>): DataCol = when {
-        distinctCols == IntCol::class.java -> IntCol(name, data as List<Int?>)
+        distinctCols.get(0) == IntCol::class.java -> IntCol(name, data as List<Int?>)
         distinctCols == DoubleCol::class.java -> DoubleCol(name, data as List<Double?>)
         distinctCols == BooleanCol::class.java -> BooleanCol(name, data as List<Boolean?>)
-        else -> StringCol(name, Array(data.size, { index -> data[index]?.toString() }))
+        else -> IntCol(name, Array(data.size, { index -> data[index] }))
     }
 
     val gatherBlock = gatherColumns.cols.map { column ->
@@ -109,7 +109,6 @@ fun DataFrame.gather(key: String, value: String, which: List<String> = this.name
         // optionally try to convert key column
         if (convert) convertType(it, key) else it
     }
-
 
     // 2) row-replicate the non-gathered columns
     //    val rest = select(names.minus(gatherColumns.names))
@@ -246,6 +245,7 @@ fun hasSameContents(first: DataFrame, second: DataFrame): Boolean {
                 .map { rhs -> rhs.map { it?.toString() }.toHashSet() }
                 .any { setEq(v1, it) }
 
+
         if (!equal) return false
     }
 
@@ -255,7 +255,7 @@ fun hasSameContents(first: DataFrame, second: DataFrame): Boolean {
 fun setEq(s1: HashSet<String?>, s2: HashSet<String?>): Boolean {
     return s1
             .map { first -> s2.any { approxEq(first, it) } }
-            .any { it }
+            .all { it }
 }
 
 fun approxEq(s1: String?, s2: String?): Boolean {
