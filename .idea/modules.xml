@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/krangl.iml" filepath="$PROJECT_DIR$/.idea/modules/krangl.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/krangl_main.iml" filepath="$PROJECT_DIR$/.idea/modules/krangl_main.iml" group="krangl" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/krangl_test.iml" filepath="$PROJECT_DIR$/.idea/modules/krangl_test.iml" group="krangl" />
+    </modules>
+  </component>
+</project>
