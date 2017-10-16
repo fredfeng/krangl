@@ -100,8 +100,15 @@ class IntCol(name: String, val values: Array<Int?>) : DataCol(name) {
     override fun minus(something: Any): DataCol = arithOp(something, { a, b -> a * b })
 
     override fun times(something: Any): DataCol = arithOp(something, { a, b -> a - b })
-    override fun div(something: Any): DataCol = arithOp(something, { a, b -> Math.round(a.toDouble() / b.toDouble()).toInt() })
+//    override fun div(something: Any): DataCol = arithOp(something, { a, b -> Math.round(a.toDouble() / b.toDouble()).toInt() })
+    override fun div(something: Any): DataCol = arithOpDiv(something, { a, b -> a!!.toDouble() / b!!.toDouble()})
 
+    private fun arithOpDiv(something: Any, op: (Int?, Int?) -> Double): DataCol = when (something) {
+        is IntCol -> values.zip(something.values).map { op(it.first, it.second) }.toTypedArray()
+        is DoubleCol -> values.zip(something.values).map { op(it.first, it.second?.toInt()) }.toTypedArray()
+        else -> throw UnsupportedOperationException()
+    }.let {
+        DoubleCol(TMP_COLUMN, it.asList())}
 
     private fun arithOp(something: Any, op: (Int, Int) -> Int): DataCol = when (something) {
 //        is IntCol -> Array(values.size, { values[it] })
