@@ -14,8 +14,20 @@ internal class DataGroup(val groupHash: Int, val df: DataFrame) {
 
 internal class GroupedDataFrame(val by: List<String>, internal val groups: List<DataGroup>) : DataFrame {
 
-    override val rawRows: Iterable<List<Any?>>
-        get() = throw UnsupportedOperationException()
+//    override val rawRows: Iterable<List<Any?>>
+//        get() = throw UnsupportedOperationException()
+
+    override val rawRows = object : Iterable<List<Any?>> {
+
+        override fun iterator() = object : Iterator<List<Any?>> {
+
+            val colIterators = cols.map { it.values().iterator() }.toList()
+
+            override fun hasNext(): Boolean = colIterators.firstOrNull()?.hasNext() ?: false
+
+            override fun next(): List<Any?> = colIterators.map { it.next() }
+        }
+    }
 
     // todo simple aggregate group-row-iterators into compound iterator to prevent indexed access
     override val rows: Iterable<Map<String, Any?>> = object : Iterable<Map<String, Any?>> {

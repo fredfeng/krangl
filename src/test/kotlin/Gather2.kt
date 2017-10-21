@@ -9,7 +9,7 @@ fun main(args: Array<String>) {
 
     // Create data-frame in memory
     val df: DataFrame = dataFrameOf("id", "yr1", "yr2", "yr3", "var")(
-            1, 1090, 2066, 3050, "yr2",
+            1, 1090.22, 2066, 3050, "yr2",
             2, 1092, 3066, 6050, "yr1"
     )
     df.print()
