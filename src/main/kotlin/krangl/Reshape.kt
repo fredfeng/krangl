@@ -15,7 +15,7 @@ fun DataFrame.spread(key: String, value: String, fill: Any? = null, convert: Boo
     val newColNames = this[key].values().distinct()  // .map { it.toString() } dont'convert already because otherwise join will fail
 
     // make sure that new column names do not exist already
-    if(!names.intersect(newColNames).isEmpty()) return SimpleDataFrame()
+    if (!names.intersect(newColNames).isEmpty()) return SimpleDataFrame()
     require(names.intersect(newColNames).isEmpty()) { "spread columns do already exist in data-frame" }
 
 
@@ -107,7 +107,9 @@ fun DataFrame.gather(key: String, value: String, which: List<String> = this.name
         )
     }.bindRows().let {
         // optionally try to convert key column
-        if (convert) convertType(it, key) else it
+        // if (convert) convertType(it, key) else it
+        // optionally try to convert value column
+        if (convert) convertType(it, value) else it
     }
 
     // 2) row-replicate the non-gathered columns
@@ -236,6 +238,11 @@ fun DataFrame.separate(column: String, into: List<String>, sep: String = "_", re
 }
 
 fun hasSameContents(first: DataFrame, second: DataFrame): Boolean {
+
+    return biCompare(first, second) && biCompare(second, first)
+}
+
+fun biCompare(first: DataFrame, second: DataFrame): Boolean {
     if (!((first.ncol == second.ncol) && (first.nrow == second.nrow))) return false
 
     //first.rawRows.toList().withIndex().forEach { (index, lhs) ->
