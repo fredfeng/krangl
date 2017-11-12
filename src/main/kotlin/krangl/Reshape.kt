@@ -86,8 +86,13 @@ fun DataFrame.spread(key: String, value: String, fill: Any? = null, convert: Boo
  */
 fun DataFrame.gather(key: String, value: String, which: List<String> = this.names, convert: Boolean = false): DataFrame {
     require(which.isNotEmpty()) { "the column selection to be `gather`ed must not be empty" }
+    var convert_ = convert
 
     val gatherColumns = select(which)
+    for (col in gatherColumns.cols) if (col is StringCol) {
+        convert_ = false
+        break
+    }
 
     // 1) convert each gather column into a block
     val distinctCols = gatherColumns.cols.map { it.javaClass }.distinct()
@@ -109,7 +114,7 @@ fun DataFrame.gather(key: String, value: String, which: List<String> = this.name
         // optionally try to convert key column
         // if (convert) convertType(it, key) else it
         // optionally try to convert value column
-        if (convert) convertType(it, value) else it
+        if (convert_) convertType(it, value) else it
     }
 
     // 2) row-replicate the non-gathered columns

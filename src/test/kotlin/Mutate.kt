@@ -19,4 +19,5 @@ fun main(args: Array<String>) {
     )
     var dfUnite = df.mutate("result", { it["Low"] / it["High"]})
     dfUnite.print()
+    println(dfUnite["High"].values()[0])
 }

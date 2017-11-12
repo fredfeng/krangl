@@ -18,7 +18,7 @@ fun main(args: Array<String>) {
             2, "k|l", 6, 17
     )
 
-    var dfUnite = df.separate("Year", mutableListOf("Part1", "Part2"), "\\.|_|\\|")
+    var dfUnite = df.separate("Year", mutableListOf("Part1", "Part2"), "\\.|-|_|\\|")
 
     dfUnite.print()
     val dd: DataFrame = SimpleDataFrame()
